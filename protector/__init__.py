@@ -12,9 +12,9 @@ dangerousTags = ['<script', '<img', '<video', '<a', '<body', '<iframe', '<bgsoun
 dangerousAttributes = ['src', 'javascript', 'href', 'onmouseover', 'onload', 'onerror', 'background',
     'oncopy', 'oncut', 'oninput', 'onkeydown', 'onkeypress', 'onkeyup', 'onpaste',
     'onbeforeupload', 'onhashchange', 'onoffline', 'online', 'onreadystatechange ',
-    'onunload', 'onreset', 'onsubmit', 'onlick',' oncontextmenu', 'ondbclick', 'onmousedown',
+    'onunload', 'onreset', 'onsubmit', 'onclick',' oncontextmenu', 'ondbclick', 'onmousedown',
     'onmousemove', 'onmouseout', 'onmouseover', 'onmouseup', 'onmousewheel', 'onscroll', 'onblur', 'onfocus']
-dangerousWords = ['eval', 'exec', 'alert', 'document.write', 'document["write"]', "document['write']"]
+dangerousWords = ['eval'] #do we need the following? 'exec', 'alert', 'document.write', 'document["write"]', "document['write']"]
 cookieStr = ['document.cookie', 'document["cookie"]', "document['cookie']"]
     
 def normalize(s):
@@ -46,21 +46,30 @@ def findFirstInList(tList, tString, curIndex):
 def argIsOk(arg):
     normArg = normalize(arg)
     curTagIndex = -1
-    while True:
+    while True: #for every tag in arg string
         [curTagIndex, curTag] = findFirstInList(dangerousTags, arg, curTagIndex + 1)
         if curTagIndex == -1:
             return True
-        if curTag == '<script': #if current tag == <script>
-            curAttrIndex = curTagIndex
-            curAttribute = "No attribute"
-        else :
-            [curAttrIndex, curDangAttribute] = findFirstInList(dangerousAttributes, arg, curTagIndex)
-        [curWordIndex, curWord] = findFirstInList(dangerousWords, arg, curAttrIndex)
-        [curCookieIndex, curCookie] = findFirstInList(cookieStr, arg, curAttrIndex)
-        if curWordIndex == -1 and curCookieIndex == -1:
-            continue
-        print ' '.join(['Found XSS: ', curTag, curAttribute, curWord, curCookie])
-        return False
+        curAttrIndex = curTagIndex
+        while True: #for every attribute of given tag
+        #it will iterate till the end of arg string, not till the closing tag ?! Needs thinking
+            if (curAttrIndex > len(arg)):
+                break
+            if curTag == '<script': 
+                curAttribute = "No attribute needed"
+            else :
+                [curAttrIndex, curAttribute] = findFirstInList(dangerousAttributes, arg, curAttrIndex + 1)
+            if curAttrIndex == -1:
+                break
+            curWordIndex = curCookieIndex = curAttrIndex
+            while True: #for every word and cookie
+                [curWordIndex, curWord] = findFirstInList(dangerousWords, arg, curWordIndex + 1)
+                [curCookieIndex, curCookie] = findFirstInList(cookieStr, arg, curCookieIndex + 1)
+                if curWordIndex == -1 and curCookieIndex == -1:
+                    curAttrIndex += 1
+                    break
+                print ' '.join(['Found XSS: ', curTag, curAttribute, curWord, curCookie])
+                return False
     return True
 
 
