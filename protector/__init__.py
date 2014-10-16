@@ -47,24 +47,24 @@ def argIsOk(arg):
     normArg = normalize(arg)
     curTagIndex = -1
     while True: #for every tag in arg string
-        [curTagIndex, curTag] = findFirstInList(dangerousTags, arg, curTagIndex + 1)
+        [curTagIndex, curTag] = findFirstInList(dangerousTags, normArg, curTagIndex + 1)
         if curTagIndex == -1:
             return True
         curAttrIndex = curTagIndex
         while True: #for every attribute of given tag
         #it will iterate till the end of arg string, not till the closing tag ?! Needs thinking
-            if (curAttrIndex > len(arg)):
+            if (curAttrIndex > len(normArg)):
                 break
             if curTag == '<script': 
                 curAttribute = "No attribute needed"
             else :
-                [curAttrIndex, curAttribute] = findFirstInList(dangerousAttributes, arg, curAttrIndex + 1)
+                [curAttrIndex, curAttribute] = findFirstInList(dangerousAttributes, normArg, curAttrIndex + 1)
             if curAttrIndex == -1:
                 break
             curWordIndex = curCookieIndex = curAttrIndex
             while True: #for every word and cookie
-                [curWordIndex, curWord] = findFirstInList(dangerousWords, arg, curWordIndex + 1)
-                [curCookieIndex, curCookie] = findFirstInList(cookieStr, arg, curCookieIndex + 1)
+                [curWordIndex, curWord] = findFirstInList(dangerousWords, normArg, curWordIndex + 1)
+                [curCookieIndex, curCookie] = findFirstInList(cookieStr, normArg, curCookieIndex + 1)
                 if curWordIndex == -1 and curCookieIndex == -1:
                     curAttrIndex += 1
                     break
