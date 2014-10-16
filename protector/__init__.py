@@ -37,10 +37,17 @@ def checkRE(inputString):
                     return False
     return True
 
-def validateResponse(request_args, response):
+def canEscapeResponse(request_args, response): #somewhat heuristic method
+    canEscape = False;
     for val in request_args.values():
-        if response.count(val) == 1:
-            response.replace(val, escape(val, True).replace(':', '#&58;') )
+        if response.data.count(val) == 1: #to avoid situations with input == <br>
+            newVal = cgi.escape(val, True).replace(':', '#&58;')
+            response.set_data(response.data.replace(val, newVal))
+            print val
+            print cgi.escape(val, True).replace(':', '#&58;')
+            print response.data
+            canEscape = True
+    return canEscape
 
 
 
@@ -56,7 +63,9 @@ def protect(view_func):
         rendered_response = view_func(*args, **kwargs)
         if type(rendered_response) is not Response:
             rendered_response = make_response(rendered_response)
-
+        if canEscapeResponse(request.args, rendered_response):
+            return rendered_response
+        return rendered_response
     return wrapper
 '''
 def protect(view_func):
