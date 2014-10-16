@@ -7,14 +7,15 @@ import HTMLParser
 import re
 import cgi
 
-def check_cluw(request_args):
-    return all('<' not in arg_value for arg_value in request_args.values())
-
-def check_html(request_args):
-    return all('&#' not in arg_value for arg_value in request_args.values())
-
-def check_blash(request_args):
-    return all('\\' not in arg_value for arg_value in request_args.values())
+    
+dangerousTags = ['<script', '<img', '<video', '<a', '<body', '<iframe', '<bgsound'] #taken from owasp cheat sheet
+dangerousAttributes = ['src', 'javascript', 'href', 'onmouseover', 'onload', 'onerror', 'background',
+    'oncopy', 'oncut', 'oninput', 'onkeydown', 'onkeypress', 'onkeyup', 'onpaste',
+    'onbeforeupload', 'onhashchange', 'onoffline', 'online', 'onreadystatechange ',
+    'onunload', 'onreset', 'onsubmit', 'onlick',' oncontextmenu', 'ondbclick', 'onmousedown',
+    'onmousemove', 'onmouseout', 'onmouseover', 'onmouseup', 'onmousewheel', 'onscroll', 'onblur', 'onfocus']
+dangerousWords = ['eval', 'exec', 'alert', 'document.write', 'document["write"]', "document['write']"]
+cookieStr = ['document.cookie', 'document["cookie"]', "document['cookie']"]
     
 def normalize(s):
     parser = HTMLParser.HTMLParser() 
@@ -23,39 +24,46 @@ def normalize(s):
     s = s.lower() 
     return "".join(s.split()) #remove whitespaces
 
-def checkRE(inputString):
-    contextCrusher = ['<script', '<javascript', '<img', 'body', 'video src', 'video']      
-    event = ['','onmouseover','onload','onerror','background']
-    valuableInfo = ['document.cookie','document[\'cookie\']', 'document["cookie"]', 'eval']
-    for eachContext in contextCrusher:
-        for eachEvent in event:
-            for eachValuable in valuableInfo:
-                regExp = eachContext + '(.)*' +  eachEvent + '(.)*' + eachValuable
-                match = re.search(regExp,inputString)
-                if match != None:
-                    print 'found match: \t regExp \t\t\t input \n\t' + regExp + '\t' + match.group(0)
-                    return False
-    return True
-
 def canEscapeResponse(request_args, response): #somewhat heuristic method
-    canEscape = False;
+    canEscapeCount = 0 #it tries to find and escape all input args in resulting rendered page
     for val in request_args.values():
-        if response.data.count(val) == 1: #to avoid situations with input == <br>
+        if response.data.count(val) == 1: #to avoid situations with input like <br>
             newVal = cgi.escape(val, True).replace(':', '#&58;')
             response.set_data(response.data.replace(val, newVal))
-            print val
-            print cgi.escape(val, True).replace(':', '#&58;')
-            print response.data
-            canEscape = True
-    return canEscape
+            canEscapeCount += 1
+    return canEscapeCount == len(request_args.values()) #if all args were escaped it means that page is secure
+
+def findFirstInList(tList, tString, curIndex):
+    minIndex = -1
+    minSubStr = ""
+    for subStr in tList:
+        tmp = tString.find(subStr, curIndex)
+        if (tmp != -1 and tmp < minIndex) or (minIndex == -1):
+            minIndex = tmp
+            minSubStr = subStr
+    return [minIndex, minSubStr]
+
+def argIsOk(arg):
+    normArg = normalize(arg)
+    curTagIndex = -1
+    while True:
+        [curTagIndex, curTag] = findFirstInList(dangerousTags, arg, curTagIndex + 1)
+        if curTagIndex == -1:
+            return True
+        if curTag == '<script': #if current tag == <script>
+            curAttrIndex = curTagIndex
+            curAttribute = "No attribute"
+        else :
+            [curAttrIndex, curDangAttribute] = findFirstInList(dangerousAttributes, arg, curTagIndex)
+        [curWordIndex, curWord] = findFirstInList(dangerousWords, arg, curAttrIndex)
+        [curCookieIndex, curCookie] = findFirstInList(cookieStr, arg, curAttrIndex)
+        if curWordIndex == -1 and curCookieIndex == -1:
+            continue
+        print ' '.join(['Found XSS: ', curTag, curAttribute, curWord, curCookie])
+        return False
+    return True
 
 
-
-REQUEST_VALIDATORS = [
-]
-
-RESPONSE_VALIDATORS = [
-]
 
 def protect(view_func):
     @wraps(view_func)
@@ -63,48 +71,10 @@ def protect(view_func):
         rendered_response = view_func(*args, **kwargs)
         if type(rendered_response) is not Response:
             rendered_response = make_response(rendered_response)
-        if canEscapeResponse(request.args, rendered_response):
-            return rendered_response
+        #if canEscapeResponse(request.args, rendered_response):
+            #return rendered_response
+        for arg in request.args.values():
+            if not argIsOk(arg):
+                return 'prohibited'
         return rendered_response
     return wrapper
-'''
-def protect(view_func):
-    @wraps(view_func)
-    def wrapper(*args, **kwargs):
-        # validate request args2
-        #if all(validator(request.args for validator in REQUEST_VALIDATORS):
-        for val in request.args.values():
-            #if not checkRE(val):
-                #   return 'prohibited'
-            rendered_response = view_func(*args, **kwargs)
-            # view functions can return either raw html code
-            # or object of Response class
-            if type(rendered_response) is not Response:
-                rendered_response = make_response(rendered_response)
-
-            # validate response
-            if all(validator(rendered_response) for validator in RESPONSE_VALIDATORS):
-                print rendered_response.get_data()
-                return rendered_response
-
-    return wrapper
-'''
-'''
-        if (all(checks)): 
-            rendered_response = view_func(*args, **kwargs)
-            # view functions can return either raw html code
-            # or object of Response class
-            if type(rendered_response) is not Response:
-                rendered_response = make_response(rendered_response)
-
-            # validate response
-            if all(validator(rendered_response)
-                for validator in RESPONSE_VALIDATORS
-            ):
-                # everything is fine
-                return rendered_response
-        # something went wrong
-        return 'prohibited'
-
-    return wrapper
-'''
