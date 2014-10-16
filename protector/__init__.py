@@ -80,8 +80,8 @@ def protect(view_func):
         rendered_response = view_func(*args, **kwargs)
         if type(rendered_response) is not Response:
             rendered_response = make_response(rendered_response)
-        #if canEscapeResponse(request.args, rendered_response):
-            #return rendered_response
+        if canEscapeResponse(request.args, rendered_response):
+            return rendered_response
         for arg in request.args.values():
             if not argIsOk(arg):
                 return 'prohibited'
