@@ -1,0 +1,156 @@
+[{
+    "title": "XSS #1",
+    "result": [{
+        "status": "студент",
+        "first_name": "Павел",
+        "second_name": "Черемушкин",
+        "points": 1000,
+        "year": 3,
+        "org": "ВМК МГУ",
+        "nickname": "PaulCher"
+    }, {
+        "status": "студент",
+        "first_name": "Рамиль",
+        "second_name": "Янбулатов",
+        "points": 1000,
+        "year": "2",
+        "org": "ВМК МГУ",
+        "nickname": "ray"
+    }, {
+        "status": "студент",
+        "first_name": "Илья",
+        "second_name": "Вашуров",
+        "points": 1000,
+        "year": "4",
+        "org": "ВМК МГУ",
+        "nickname": "Dadrik"
+    }, {
+        "status": "студент",
+        "first_name": "Роман",
+        "second_name": "Шемякин",
+        "points": 1000,
+        "year": "4",
+        "org": "ВМК МГУ",
+        "nickname": "ramon93i7"
+    }, {
+        "status": "студент",
+        "first_name": "Анатолий",
+        "second_name": "Василенко",
+        "points": 1000,
+        "year": "4",
+        "org": "ВМК МГУ",
+        "nickname": "Tolya"
+    }, {
+        "status": "студент",
+        "first_name": "Игорь",
+        "second_name": "Ворона",
+        "points": 400,
+        "year": "4",
+        "org": "ВМК МГУ",
+        "nickname": "crowslord"
+    }, {
+        "status": "студент",
+        "first_name": "Евгений",
+        "second_name": "Солнцев",
+        "points": 1000,
+        "year": "3",
+        "org": "ВМК МГУ",
+        "nickname": "?"
+    }, {
+        "status": "студент",
+        "first_name": "Вадим",
+        "second_name": "Шейдаев",
+        "points": 1000,
+        "year": "3",
+        "org": "ВМК МГУ",
+        "nickname": "Enr1g"
+    }, {
+        "status": "студент",
+        "first_name": "Иван",
+        "second_name": "Зубков",
+        "points": 400,
+        "year": "?",
+        "org": "ВМК МГУ",
+        "nickname": "?"
+    }, {
+        "status": "студент",
+        "first_name": "Алексей",
+        "second_name": "Гожев",
+        "points": 1000,
+        "year": "?",
+        "org": "ВМК МГУ",
+        "nickname": "?"
+    }, {
+        "status": "студент",
+        "first_name": "Борис",
+        "second_name": "Савков",
+        "points": 1000,
+        "year": "4",
+        "org": "ВМК МГУ",
+        "nickname": "Destro"
+    }, {
+        "status": "студент",
+        "first_name": "Руслан",
+        "second_name": "Гайтукиев",
+        "points": 1000,
+        "year": "5",
+        "org": "ВМК МГУ",
+        "nickname": "rus"
+    }, {
+        "status": "студент",
+        "first_name": "Даниил",
+        "second_name": "Сигалов",
+        "points": 1000,
+        "year": "5",
+        "org": "ВМК МГУ",
+        "nickname": "asterite"
+    }, {
+        "status": "студент",
+        "first_name": "Илья",
+        "second_name": "Говорков",
+        "points": 1000,
+        "year": "3",
+        "org": "ВМК МГУ",
+        "nickname": "Median"
+    }, {
+        "status": "студент",
+        "first_name": "Роман",
+        "second_name": "Лебедь",
+        "points": 1000,
+        "year": "2",
+        "org": "ВМК МГУ",
+        "nickname": "Ziv00s3"
+    }, {
+        "status": "студент",
+        "first_name": "Дмитрий",
+        "second_name": "Иванов",
+        "points": 400,
+        "year": "?",
+        "org": "ВМК МГУ",
+        "nickname": "?"
+    }, {
+        "status": "студент",
+        "first_name": "Виктор",
+        "second_name": "Чиботару",
+        "points": 1000,
+        "year": "3",
+        "org": "ВМК МГУ",
+        "nickname": "?"
+    }, {
+        "status": "студент",
+        "first_name": "Артем",
+        "second_name": "Лебедев",
+        "points": 200,
+        "year": "4",
+        "org": "ВМК МГУ",
+        "nickname": "artem"
+    }, {
+        "status": "студент",
+        "first_name": "Владимир",
+        "second_name": "Евграфов",
+        "points": 400,
+        "year": "2",
+        "org": "ВМК МГУ",
+        "nickname": "vovapi"
+    }]
+}]

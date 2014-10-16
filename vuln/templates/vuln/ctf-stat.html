@@ -1,0 +1,380 @@
+{% autoescape off %}
+<!doctype html>
+<meta charset="utf-8">
+<html>
+<head>
+    <title>CTF statistics</title>
+    <link rel="stylesheet" type="text/css" href="{{url_for('vuln.static', filename='bootstrap/css/bootstrap.min.css')}}">
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="{{url_for('vuln.static', filename='scripts/jquery.min.js')}}"></script>
+    <script type="text/javascript">
+        var users = [],
+            events = [],
+            selectedUser = '{{nick}}';
+
+        function User(obj){
+            this.first_name = obj.first_name;
+            this.second_name = obj.second_name;
+            this.status = obj.status;
+            this.nickname = obj.nickname;
+            this.year = obj.year;
+            this.org = obj.org;
+
+            this.overall = 0;
+            this.scores = {};
+        }
+
+        function Event(title) {
+            this.title = title;
+            this.max = 0;
+            this.min = 0;
+        }
+
+        User.prototype.getName = function() {
+            return this.first_name + ' ' + this.second_name;
+        };
+
+        User.prototype.getStatus = function () {
+            if (this.status === 'студент') {
+                return this.year + ' курс ' + this.org;
+            } else if ((this.status === 'аспирант') || (this.status === 'сотрудник')){
+                return this.status + ' ' + this.org;
+            } else {
+                return this.status + ' ' + this.year + ' ' + this.org;
+            }
+        };
+
+        User.prototype.getCells = function(){
+            var cells = [this.nickname, this.getName(), this.getStatus()];
+
+            for (title in this.scores) {
+                cells.push(this.scores[title]);
+            }
+            cells.push(this.overall);
+            return cells;
+        }
+
+        function sortByField(fieldName) {
+            if ((fieldName == 'second_name') || (fieldName == 'nickname')) {
+                return function (a, b){
+                    var first = a[fieldName].toLowerCase(),
+                        second = b[fieldName].toLowerCase();
+                    if (first < second) {
+                        return -1;
+                    } else if (first > second) {
+                        return 1;
+                    }
+                    return 0;
+                }
+            } else if (fieldName === 'stat') {
+                return function(a, b) {
+                    var byYear = sortByField('year'),
+                        byOrg = sortByField('org'),
+                        byStatus = sortByField('status');
+
+                    if (byStatus(a, b)) {
+                        return -byStatus(a, b);
+                    } else if (byYear(a, b)) {
+                        return byYear(a, b);
+                    } else if (byOrg(a, b)) {
+                        return byOrg(a, b);
+                    }
+                    return 0;
+                };
+            } else if (fieldName === 'title') {
+                return function(title) {
+                    return function(a, b){
+                        return a.scores[title] - b.scores[title];
+                    }
+                }
+            } else if (fieldName === 'status') {
+                var order = ['сотрудник', 'аспирант', 'студент'];
+                return function (a, b){
+                    return order.indexOf(a.status) - order.indexOf(b.status);
+                }
+            } else {
+                return function (a, b){
+                    var first = a[fieldName],
+                        second = b[fieldName];
+                    if (first < second) {
+                        return -1;
+                    } else if (first > second) {
+                        return 1;
+                    }
+                    return 0;
+                }
+            }
+        }
+
+        function sortByFunc (func){
+            result = (function(arr){
+                var straight = false,
+                    _func = func;
+                return function(arr){
+                    arr.sort(_func);
+                    if (!straight) {
+                        arr.reverse();
+                    }
+                    straight = !straight;
+                    return !straight;
+                }
+            })();
+            return result;
+        }
+
+        function exists(arr, obj) {
+            var tempUser = new User(obj);
+            for (var i = 0, length = arr.length; i < length; i++) {
+                if (arr[i].getName() === tempUser.getName()) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function initColumn(selector, columnName, func, initial) {
+            var table = document.querySelector(selector),
+                theadRow = table.querySelector('thead>tr'),
+                th = document.createElement('th'),
+                defaultClass = 'defaultColumn',
+                ascClass = 'ascColumn',
+                descClass = 'descColumn',
+                restyleSorted = function() {
+                    var order,
+                        children;
+                    if (typeof func !== 'undefined') {
+                        order = func(users);
+                        children = $(theadRow).children();
+                        children.removeClass(ascClass + ' ' + descClass);
+                        children.addClass(defaultClass);
+
+                        th.removeClass(defaultClass);
+                        if (order) {
+                            th.addClass(descClass);
+                        } else {
+                            th.addClass(ascClass);
+                        }
+                        drawTable(selector, users);
+                    }
+                };
+
+            th = $(th);
+            th.text(columnName);
+            th.addClass(defaultClass);
+            th.bind('click', restyleSorted);
+            if (initial) {
+                restyleSorted(func);
+            }
+            th.appendTo(theadRow);
+        }
+
+        function initUsers(statsArray){
+            var tempScore = 0;
+
+            for (var i = 0, length = statsArray.length; i < length; i++) {
+                title = statsArray[i].title;
+                events.push(new Event(title));
+                results = statsArray[i].result;
+                for (var j = 0, innerLength = results.length; j < innerLength; j++){
+                    var currentUser,
+                        index = exists(users, results[j])
+                    if (index === -1) {
+                        //user doesnt exist
+                        currentUser = new User(results[j]);
+                        users.push(currentUser);
+                    } else {
+                        currentUser = users[index];
+                    }
+                    currentUser.scores[title] = results[j].points;
+                    currentUser.overall += results[j].points;
+                }
+            }
+
+            for (var j = 0, innerLength = users.length; j < innerLength; j++){
+                for (var i = 0, length = events.length; i < length; i++) {
+                    if (!(events[i].title in users[j].scores)) {
+                        users[j].scores[events[i].title] = 0;
+                    } else {
+                        tempScore = users[j].scores[events[i].title];
+                        if ((tempScore > events[i].max) && (events[i].title != 'Bonus track')){
+                            events[i].max = tempScore;
+                        }
+                    }
+                }
+            }
+        }
+
+        function initTable(selector, statObjects){
+            var table = document.querySelector(selector),
+                sortByOverall = sortByFunc(sortByField('overall'));
+
+            initUsers(statObjects);
+
+            initColumn(selector, 'Nick', sortByFunc(sortByField('nickname')));
+            initColumn(selector, 'Name', sortByFunc(sortByField('second_name')));
+            initColumn(selector, 'Status', sortByFunc(sortByField('stat')));
+
+            for (var i = 0, length=statObjects.length; i < length; i++) {
+                title = statObjects[i].title;
+                initColumn(selector, title, sortByFunc(sortByField('title')(title)));
+            }
+
+            initColumn(selector, 'Overall', sortByOverall, true);
+            drawTable('table', users);
+        }
+
+
+        function addCell(parent, text, className){
+            var td = document.createElement('td');
+            td = $(td);
+            td.addClass(className)
+            td.text(text);
+            td.appendTo(parent);
+        }
+
+        function drawTable(selector, users) {
+            var table = $(selector),
+                tbody = table.children('tbody'),
+                totalMax = 0,
+                userMax = 0,
+                user,
+                className,
+                threshold = 0.2,
+                totalMinClass = 'danger',
+                totalMaxClass = 'success',
+                eventMinClass = 'danger',
+                eventMaxClass = 'success',
+                selectedUserClass = 'current-user';
+
+            tbody.empty();
+            for (var i = 0, length = events.length; i < length; i++) {
+                totalMax += events[i].max;
+            }
+
+            for (var i = 0, length = users.length; i < length; i++) {
+                if (users[i].overall >= userMax){
+                    userMax = users[i].overall;
+                }
+            }
+
+            for (var i = 0, length = users.length; i < length; i++) {
+                tr = document.createElement('tr');
+                tr = $(tr);
+
+                user = users[i];
+                className = '';
+
+                if (user.overall <= totalMax * threshold) {
+                    className += totalMinClass;
+                } else if (user.overall === userMax) {
+                    className += totalMaxClass;
+                }
+
+                if (selectedUser && user.nickname.toLowerCase() == selectedUser.toLowerCase()) {
+                    className = selectedUserClass;
+                }
+
+
+                addCell(tr, user.nickname, className);
+                addCell(tr, user.getName(), className);
+                addCell(tr, user.getStatus(), className);
+
+                for (var j = 0, innerLength = events.length; j < innerLength; j++){
+                    className = '';
+                    title = events[j].title;
+                    if (title != 'Bonus track') {
+                        if (user.scores[title] <= threshold * events[j].max) {
+                            className += eventMinClass;
+                        } else if (user.scores[title] === events[j].max) {
+                            className += eventMaxClass;
+                        }
+                    } else {
+                        if (user.scores[title] != 0) {
+                            className += eventMaxClass;
+                        }
+                    }
+                    addCell(tr, user.scores[title], className);
+                }
+
+                className = '';
+                if (user.overall <= threshold * totalMax) {
+                    className += totalMinClass;
+                } else if (user.overall === userMax) {
+                    className += totalMaxClass;
+                }
+                addCell(tr, user.overall, className);
+                tr.appendTo(tbody);
+            }
+            tbody.appendTo(table);
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function(){
+            var url = '{{url_for("vuln.static", filename="autumn-2014.json")}}';
+
+            $.ajax(url, {
+                method: 'GET',
+                async: true,
+            }).done(function(data){
+                if (typeof data === 'string') {
+                    data = JSON.parse(data);
+                }
+                initTable('#stat', data);
+            });
+        });
+
+    </script>
+    <style type="text/css">
+        .content {
+            width: 70%;
+            min-width: 1200px;
+            margin: auto;
+        }
+
+        .defaultColumn {
+            cursor: pointer;
+            background: url({{url_for('vuln.static', filename='images/bg.gif')}});
+            background-repeat: no-repeat;
+            background-position: 90% 50%;
+            //background-position: right center;
+        }
+
+        .descColumn {
+            cursor: pointer;
+            background: url({{url_for('vuln.static',filename='images/desc.gif')}});
+            background-repeat: no-repeat;
+            background-position: 80% 50%;
+
+        }
+
+        .ascColumn {
+            cursor: pointer;
+            background: url({{url_for('vuln.static',filename='images/asc.gif')}});
+            background-repeat: no-repeat;
+            background-position: 80% 50%;
+        }
+
+        .bonusColumn {
+            background: #33CCCC;
+        }
+
+        .current-user {
+            background: #d9edf7;
+        }
+
+    </style>
+</head>
+<body>
+<div class="content">
+<table id="stat" class="table table-condensed">
+<thead>
+    <tr>
+    </tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+</div>
+</body>
+</html>
+{% endautoescape %}

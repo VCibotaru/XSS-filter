@@ -1,0 +1,11 @@
+{% extends "vuln/base.html" %}
+{% block body %}
+{% autoescape off %}
+    <form method="GET">
+        <label for="search">I want to learn about </label><input type="text" name="search" value="{{search}}">
+    </form>
+    {% if search %}
+        <h2>You can learn nothing.</h2>
+    {% endif %}
+{% endautoescape %}
+{% endblock body %}
