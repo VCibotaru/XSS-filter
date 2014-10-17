@@ -14,9 +14,43 @@ dangerousAttributes = ['src', 'javascript', 'href', 'onmouseover', 'onload', 'on
     'onbeforeupload', 'onhashchange', 'onoffline', 'online', 'onreadystatechange ',
     'onunload', 'onreset', 'onsubmit', 'onclick',' oncontextmenu', 'ondbclick', 'onmousedown',
     'onmousemove', 'onmouseout', 'onmouseover', 'onmouseup', 'onmousewheel', 'onscroll', 'onblur', 'onfocus']
-dangerousWords = ['eval'] #do we need the following? 'exec', 'alert', 'document.write', 'document["write"]', "document['write']"]
+dangerousWords = ['eval', 'exec', 'alert', 'document.write', 'document["write"]', "document['write']",
+    'document.writeln', 'document["writeln"]', "document['writeln']", "innerhtml", "outerhtml", "javascript"]
 cookieStr = ['document.cookie', 'document["cookie"]', "document['cookie']"]
+
+
+#white list would be huge, so warm welcome to 
+def checkBlackList(tag, attribute, word, cookie):
+    if word == 'eval': #if word == 'eval' then we don`t even need document.cookie, e.g. it can be obtained with brainfuck js
+        isCookie = True
+    else:
+        isCookie = cookie in cookieStr
+
+    scriptList = ['src'] + dangerousWords
+    if tag == '<script' and word in scriptList and isCookie:
+        return True
+
+    mediaList = ['<img', '<video', '<iframe', '<bgsound']
+    if tag in mediaList and attribute in dangerousAttributes and isCookie:
+        if attribute == 'src':
+            isDangWord = True
+        else:
+            isDangWord = word in dangerousWords
+        return isDangWord
+
+    if tag == '<a' and attribute == 'href' and isCookie:
+        return True
+
+    if tag == '<body' and word in dangerousWords and isCookie:
+        return True
+
+    return False
+
     
+
+
+
+
 def normalize(s):
     parser = HTMLParser.HTMLParser() 
     s = parser.unescape(s) #unescape html 
@@ -24,7 +58,8 @@ def normalize(s):
     s = s.lower() 
     return "".join(s.split()) #remove whitespaces
 
-def canEscapeResponse(request_args, response): #somewhat heuristic method
+def canEscapeResponse(request_args, response): #somewhat heuristic method. 
+    #We will probably get many falses if html tags are valid
     canEscapeCount = 0 #it tries to find and escape all input args in resulting rendered page
     for val in request_args.values():
         if response.data.count(val) == 1: #to avoid situations with input like <br>
@@ -43,11 +78,12 @@ def findFirstInList(tList, tString, curIndex):
             minSubStr = subStr
     return [minIndex, minSubStr]
 
+#this fuck (sorry, func) isn` quite accurate. TODO: rewrite in)
 def argIsOk(arg):
     normArg = normalize(arg)
     curTagIndex = -1
     while True: #for every tag in arg string
-        [curTagIndex, curTag] = findFirstInList(dangerousTags, normArg, curTagIndex + 1)
+        curTagIndex, curTag = findFirstInList(dangerousTags, normArg, curTagIndex + 1)
         if curTagIndex == -1:
             return True
         curAttrIndex = curTagIndex
@@ -56,15 +92,16 @@ def argIsOk(arg):
             if (curAttrIndex > len(normArg)):
                 break
             if curTag == '<script': 
-                curAttribute = "No attribute needed"
+                curAttribute = ""
             else :
-                [curAttrIndex, curAttribute] = findFirstInList(dangerousAttributes, normArg, curAttrIndex + 1)
+                curAttrIndex, curAttribute = findFirstInList(dangerousAttributes, normArg, curAttrIndex + 1)
             if curAttrIndex == -1:
                 break
             curWordIndex = curCookieIndex = curAttrIndex
             while True: #for every word and cookie
-                [curWordIndex, curWord] = findFirstInList(dangerousWords, normArg, curWordIndex + 1)
-                [curCookieIndex, curCookie] = findFirstInList(cookieStr, normArg, curCookieIndex + 1)
+                curWordIndex, curWord = findFirstInList(dangerousWords, normArg, curWordIndex + 1)
+                curCookieIndex, curCookie = findFirstInList(cookieStr, normArg, curCookieIndex + 1)
+                curWord, curCookie, curTagIndex, curAttribute
                 if curWordIndex == -1 and curCookieIndex == -1:
                     curAttrIndex += 1
                     break
