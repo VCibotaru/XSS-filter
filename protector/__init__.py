@@ -7,8 +7,15 @@ import HTMLParser
 import re
 import cgi
 
-    
-dangerousTags = ['<script', '<img', '<video', '<a', '<body', '<iframe', '<bgsound'] #taken from owasp cheat sheet
+#taken from owasp cheat sheet
+mediaList = ['<img', '<video', '<iframe', '<bgsound', '<form', '<input', '<table']
+hrefList = ['<a', '<href', '<link']
+bodyList = ['<frameset', '<body']
+
+dangerousTags = ['<script'] + mediaList + hrefList + bodyList
+
+dangerousTags = ['<script', '<img', '<video', '<a', '<body', '<iframe', '<bgsound', '<form', '<input', '<math',
+    '<link', '<frameset', '<table'] 
 dangerousAttributes = ['src', 'javascript', 'href', 'onmouseover', 'onload', 'onerror', 'background',
     'oncopy', 'oncut', 'oninput', 'onkeydown', 'onkeypress', 'onkeyup', 'onpaste',
     'onbeforeupload', 'onhashchange', 'onoffline', 'online', 'onreadystatechange ',
@@ -25,12 +32,10 @@ def checkBlackList(tag, attribute, word, cookie):
         isCookie = True
     else:
         isCookie = cookie in cookieStr
-
     scriptList = ['src'] + dangerousWords
-    if tag == '<script' and word in scriptList and isCookie:
+    if tag == '<script' and (word in scriptList or attribute == 'src') and isCookie:
         return True
 
-    mediaList = ['<img', '<video', '<iframe', '<bgsound']
     if tag in mediaList and attribute in dangerousAttributes and isCookie:
         if attribute == 'src':
             isDangWord = True
@@ -38,19 +43,15 @@ def checkBlackList(tag, attribute, word, cookie):
             isDangWord = word in dangerousWords
         return isDangWord
 
-    if tag == '<a' and attribute == 'href' and isCookie:
+    if tag in hrefList  and attribute == 'href' and isCookie:
         return True
 
-    if tag == '<body' and word in dangerousWords and isCookie:
+    if tag in bodyList and word in dangerousWords and isCookie:
         return True
 
     return False
 
     
-
-
-
-
 def normalize(s):
     parser = HTMLParser.HTMLParser() 
     s = parser.unescape(s) #unescape html 
@@ -73,40 +74,53 @@ def findFirstInList(tList, tString, curIndex):
     minSubStr = ""
     for subStr in tList:
         tmp = tString.find(subStr, curIndex)
-        if (tmp != -1 and tmp < minIndex) or (minIndex == -1):
+        if tmp != -1 and (tmp < minIndex or minIndex == -1):
             minIndex = tmp
             minSubStr = subStr
     return [minIndex, minSubStr]
 
-#this fuck (sorry, func) isn` quite accurate. TODO: rewrite in)
+#this fuck (sorry, func) isn`t quite accurate. TODO: rewrite in)
 def argIsOk(arg):
-    normArg = normalize(arg)
+    copyNormArg = normArg = normalize(arg)
     curTagIndex = -1
     while True: #for every tag in arg string
+        normArg = copyNormArg
         curTagIndex, curTag = findFirstInList(dangerousTags, normArg, curTagIndex + 1)
         if curTagIndex == -1:
-            return True
+            break 
+        if curTag == '<script':
+            searchStr = '</script'
+        else:
+            searchStr = '>'
+        closingTagIndex = normArg.find(searchStr, curTagIndex) #some optimization
+        if closingTagIndex:
+            normArg = copyNormArg[curTagIndex:closingTagIndex]
+
         curAttrIndex = curTagIndex
         while True: #for every attribute of given tag
-        #it will iterate till the end of arg string, not till the closing tag ?! Needs thinking
             if (curAttrIndex > len(normArg)):
                 break
-            if curTag == '<script': 
-                curAttribute = ""
-            else :
-                curAttrIndex, curAttribute = findFirstInList(dangerousAttributes, normArg, curAttrIndex + 1)
+            lastAttr = curAttrIndex
+            curAttrIndex, curAttribute = findFirstInList(dangerousAttributes, normArg, curAttrIndex + 1)
             if curAttrIndex == -1:
-                break
+                if curTag == '<script': #i don`t know the english equivalent for 'kostil`''
+                    curAttrIndex = lastAttr + 1
+                else:
+                    break
             curWordIndex = curCookieIndex = curAttrIndex
             while True: #for every word and cookie
+                lastWord = curWordIndex
+                lastCookie = curCookieIndex
                 curWordIndex, curWord = findFirstInList(dangerousWords, normArg, curWordIndex + 1)
                 curCookieIndex, curCookie = findFirstInList(cookieStr, normArg, curCookieIndex + 1)
-                curWord, curCookie, curTagIndex, curAttribute
                 if curWordIndex == -1 and curCookieIndex == -1:
                     curAttrIndex += 1
                     break
-                print ' '.join(['Found XSS: ', curTag, curAttribute, curWord, curCookie])
-                return False
+                if checkBlackList(curTag, curAttribute, curWord, curCookie):
+                    print ' '.join(['Found XSS: ', curTag, curAttribute, curWord, curCookie])
+                    return False
+                curWordIndex = lastWord + 1
+                curCookieIndex = lastCookie + 1
     return True
 
 
@@ -117,8 +131,9 @@ def protect(view_func):
         rendered_response = view_func(*args, **kwargs)
         if type(rendered_response) is not Response:
             rendered_response = make_response(rendered_response)
+        #not ok for forums, you'll see why =)
         if canEscapeResponse(request.args, rendered_response):
-            return rendered_response
+           return rendered_response
         for arg in request.args.values():
             if not argIsOk(arg):
                 return 'prohibited'
